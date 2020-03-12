@@ -6,7 +6,6 @@ import com.vmware.cnt.models.Country;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.javamoney.moneta.FastMoney;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -18,6 +17,7 @@ import java.util.List;
 @Slf4j
 @Builder
 public class TripsBudgetCalculator {
+    public static final double DEFAULT_RATE = 1.0;
     private int perCountryBudget;
     private int totalBudget;
     private String homeCountryCurrency;
@@ -28,7 +28,7 @@ public class TripsBudgetCalculator {
     TripsBudgetDTO invoke() {
         final Long perDestinationVisits = calculateBudgetSummary();
 
-        final Flux<ImmutableTriple<String, FastMoney, Double>> visitsCosts = calculateCountriesVisitsCosts(perDestinationVisits);
+        final Flux<ImmutablePair<String, FastMoney>> visitsCosts = calculateCountriesVisitsCosts(perDestinationVisits);
         if (perDestinationVisits != 0) {
             addTripsDetails(visitsCosts);
         }
@@ -50,19 +50,19 @@ public class TripsBudgetCalculator {
         return countryService.getCountry(homeCode).flatMapIterable(Country::getBorders).cache();
     }
 
-    private Flux<ImmutableTriple<String, FastMoney, Double>> calculateCountriesVisitsCosts(Long perDestinationVisits) {
+    private Flux<ImmutablePair<String, FastMoney>> calculateCountriesVisitsCosts(Long perDestinationVisits) {
         return getBorders().flatMap(country -> {
-            final Mono<String> currency = getCurrency(country);
+            final Mono<String> currency = getSingleCurrency(country);
             return currency.map(cur -> ImmutablePair.of(country, cur));
         }).flatMap(pair -> {
             final String country = pair.left;
             final String currency = pair.right;
-            final Mono<Double> conversionRate = countryService.getConversionRate(homeCountryCurrency, currency);
+            final Mono<Double> conversionRate = getConversionRate(country);
 
             return conversionRate.map(rate -> {
                 double cost = perCountryBudget;
                 String usedCurrency = homeCountryCurrency;
-                if (rate != 1) {
+                if (rate != DEFAULT_RATE) {
                     cost = BigDecimal.valueOf(perCountryBudget)
                             .multiply(BigDecimal.valueOf(rate))
                             .setScale(3, RoundingMode.HALF_DOWN)
@@ -70,7 +70,7 @@ public class TripsBudgetCalculator {
                     usedCurrency = currency;
                 }
                 log.debug("Cost of visit {}{} used rate: {}", cost, currency, rate);
-                return ImmutableTriple.of(country, FastMoney.of(cost * perDestinationVisits, usedCurrency), rate);
+                return ImmutablePair.of(country, FastMoney.of(cost * perDestinationVisits, usedCurrency));
             });
         }).doOnError(error -> {
             log.error("The following error happened on calculateCountriesVisitsCosts method!", error);
@@ -78,17 +78,29 @@ public class TripsBudgetCalculator {
         });
     }
 
+    private Mono<Double> getConversionRate(String countryCode) {
+        // for multi currency countries the API might not support all currency names so I had to call the API for all
+        // i.e (name=Switzerland currencies=[CHE, CHF, CHW] the API only knows CHF
+        return countryService.getCountry(countryCode)
+                .flatMapIterable(Country::getCurrencies)
+                .flatMap(currency -> countryService.getConversionRate(homeCountryCurrency, currency))
+                .filter(rate -> rate != DEFAULT_RATE)
+                .defaultIfEmpty(DEFAULT_RATE)
+                .elementAt(0);
+    }
 
-    private Mono<String> getCurrency(String countryCode) {
-        //The assumption that I will use the first currency for multi currency countries
+
+    private Mono<String> getSingleCurrency(String countryCode) {
+        //I will use the first currency for multi currency countries
         return countryService.getCountry(countryCode).map((country) -> country.getCurrencies().get(0));
     }
 
-    private void addTripsDetails(Flux<ImmutableTriple<String, FastMoney, Double>> visitsCosts) {
+
+    private void addTripsDetails(Flux<ImmutablePair<String, FastMoney>> visitsCosts) {
         final List<DestinationDTO> dList = visitsCosts.map((visitCost) -> {
             DestinationDTO destination = new DestinationDTO();
             final String country = visitCost.left;
-            final FastMoney cost = visitCost.middle;
+            final FastMoney cost = visitCost.right;
             destination.setCost(cost.getNumber().doubleValue());
             destination.setCountry(country);
             destination.setCurrency(cost.getCurrency().getCurrencyCode());
