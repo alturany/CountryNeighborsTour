@@ -1,2 +1,0 @@
-docker run -it -p 9999:8080 vmware/country-neighbors-tour
-docker build -t vmware/country-neighbors-tour .
