@@ -33,7 +33,6 @@ public class TripsBudgetCalculator {
             addTripsDetails(visitsCosts);
         }
         return budgetDTOBuilder.build();
-
     }
 
     private Long calculateBudgetSummary() {
@@ -52,14 +51,11 @@ public class TripsBudgetCalculator {
 
     private Flux<ImmutablePair<String, FastMoney>> calculateCountriesVisitsCosts(Long perDestinationVisits) {
         return getBorders().flatMap(country -> {
-            final Mono<String> currency = getSingleCurrency(country);
-            return currency.map(cur -> ImmutablePair.of(country, cur));
-        }).flatMap(pair -> {
-            final String country = pair.left;
-            final String currency = pair.right;
-            final Mono<Double> conversionRate = getConversionRate(country);
+            final Mono<ImmutablePair<String, Double>> pair = getCurrencyRatePair(country);
 
-            return conversionRate.map(rate -> {
+            return pair.map(p -> {
+                final String currency = p.left;
+                final Double rate = p.right;
                 double cost = perCountryBudget;
                 String usedCurrency = homeCountryCurrency;
                 if (rate != DEFAULT_RATE) {
@@ -72,27 +68,24 @@ public class TripsBudgetCalculator {
                 log.debug("Cost of visit {}{} used rate: {}", cost, currency, rate);
                 return ImmutablePair.of(country, FastMoney.of(cost * perDestinationVisits, usedCurrency));
             });
+
         }).doOnError(error -> {
             log.error("The following error happened on calculateCountriesVisitsCosts method!", error);
             throw new RuntimeException(error);
         });
     }
 
-    private Mono<Double> getConversionRate(String countryCode) {
-        // for multi currency countries the API might not support all currency names so I had to call the API for all
-        // i.e (name=Switzerland currencies=[CHE, CHF, CHW] the API only knows CHF
+    private Mono<ImmutablePair<String, Double>> getCurrencyRatePair(String countryCode) {
+        // for multi currency countries the API might not support all currency names so I had to call the API for all and select the active one
+        // i.e Switzerland currencies=[CHE, CHF, CHW] CHF is the currently active currency and others are not used
         return countryService.getCountry(countryCode)
                 .flatMapIterable(Country::getCurrencies)
-                .flatMap(currency -> countryService.getConversionRate(homeCountryCurrency, currency))
-                .filter(rate -> rate != DEFAULT_RATE)
-                .defaultIfEmpty(DEFAULT_RATE)
+                .flatMap(currency -> {
+                    final Mono<Double> conversionRate = countryService.getConversionRate(homeCountryCurrency, currency);
+                    return conversionRate.map(rate -> ImmutablePair.of(currency, rate));
+                }).filter(p -> p.right != DEFAULT_RATE)
+                .defaultIfEmpty(ImmutablePair.of(homeCountryCurrency, DEFAULT_RATE))
                 .elementAt(0);
-    }
-
-
-    private Mono<String> getSingleCurrency(String countryCode) {
-        //I will use the first currency for multi currency countries
-        return countryService.getCountry(countryCode).map((country) -> country.getCurrencies().get(0));
     }
 
 
