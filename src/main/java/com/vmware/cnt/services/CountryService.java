@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import reactor.cache.CacheMono;
 import reactor.core.publisher.Mono;
@@ -93,6 +94,7 @@ public class CountryService {
                 });
     }
 
+    @Cacheable(value="budgets", key = "#homeCode.concat('-').concat(#perCountryBudget).concat('-').concat(#totalBudget).concat(#currency)")
     public TripsBudgetDTO calculateBudget(String homeCode, int perCountryBudget, int totalBudget, String currency) {
         return TripsBudgetCalculator.builder()
                 .homeCode(homeCode)

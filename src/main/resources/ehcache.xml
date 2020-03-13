@@ -18,12 +18,24 @@
         <key-type>java.lang.String</key-type>
         <value-type>java.lang.Double</value-type>
         <expiry>
-            <ttl unit="days">1</ttl>
+            <class>com.vmware.cnt.configs.CET16hExpiry</class>
         </expiry>
 
         <resources>
             <heap unit="entries">200</heap>
         </resources>
+    </cache>
+    <cache alias="budgets">
+        <key-type>java.lang.String</key-type>
+        <value-type>com.vmware.cnt.dtos.TripsBudgetDTO</value-type>
+        <expiry>
+            <class>com.vmware.cnt.configs.CET16hExpiry</class>
+        </expiry>
+
+        <resources>
+            <heap unit="entries">500</heap>
+        </resources>
+
     </cache>
 
 </config>
