@@ -12,6 +12,7 @@ import reactor.core.publisher.Mono;
 import java.util.Set;
 
 import static com.vmware.cnt.services.CountryServiceTest.*;
+import static junit.framework.TestCase.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @RunWith(SpringRunner.class)
@@ -21,8 +22,8 @@ public class TripsBudgetCalculatorTest {
     private CountryService countryService;
 
     @Test
-    public void testBudgetCalculator() {
-
+    public void givenTheWorldHasChangedAndBulgariaIsHaving2Neighbors_whenCallTripBudget_thenCalculateTheBudget() {
+        //Given
         Mockito.doReturn(Mono.just(BULGARIA)).when(countryService).getCountry(BG);
         Mockito.doReturn(Mono.just(TURKEY)).when(countryService).getCountry(TR);
         Mockito.doReturn(Mono.just(GREECE)).when(countryService).getCountry(GR);
@@ -37,8 +38,10 @@ public class TripsBudgetCalculatorTest {
                 .homeCode(BG)
                 .build();
 
+        //When
         final TripsBudgetDTO result = tripsBudgetCalculator.invoke();
 
+        //Then
         assertEquals(BULGARIAN_CURRENCY, result.getCurrency());
         assertEquals(100, result.getLeftover());
         assertEquals(1, result.getPerDestinationVisits());
@@ -56,5 +59,51 @@ public class TripsBudgetCalculatorTest {
                                 .currency(GREECE_CURRENCY)
                                 .build()
                 ), result.getDestinations());
+    }
+
+    @Test
+    public void givenYourCountryBudgetIsMoreThanOverAllBudget_whenCallTripBudget_thenZeroTrips(){
+        //Given
+        Mockito.doReturn(Mono.just(BULGARIA)).when(countryService).getCountry(BG);
+
+        final TripsBudgetCalculator tripsBudgetCalculator = TripsBudgetCalculator.builder()
+                .countryService(countryService)
+                .homeCountryCurrency(BULGARIAN_CURRENCY)
+                .totalBudget(100)
+                .perCountryBudget(200)
+                .homeCode(BG)
+                .build();
+
+        //When
+        final TripsBudgetDTO result = tripsBudgetCalculator.invoke();
+
+        //Then
+        assertEquals(BULGARIAN_CURRENCY, result.getCurrency());
+        assertEquals(100, result.getLeftover());
+        assertEquals(0, result.getPerDestinationVisits());
+        assertTrue(result.getDestinations().isEmpty());
+    }
+
+    @Test
+    public void givenBudgetIsNotEnoughToVisitAllCountries_whenCallTripBudget_then(){
+        //Given
+        Mockito.doReturn(Mono.just(BULGARIA)).when(countryService).getCountry(BG);
+
+        final TripsBudgetCalculator tripsBudgetCalculator = TripsBudgetCalculator.builder()
+                .countryService(countryService)
+                .homeCountryCurrency(BULGARIAN_CURRENCY)
+                .totalBudget(100)
+                .perCountryBudget(60)
+                .homeCode(BG)
+                .build();
+
+        //When
+        final TripsBudgetDTO result = tripsBudgetCalculator.invoke();
+
+        //Then
+        assertEquals(BULGARIAN_CURRENCY, result.getCurrency());
+        assertEquals(100, result.getLeftover());
+        assertEquals(0, result.getPerDestinationVisits());
+        assertTrue(result.getDestinations().isEmpty());
     }
 }
