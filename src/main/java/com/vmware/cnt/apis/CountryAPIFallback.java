@@ -8,7 +8,7 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 
 @Component
-@Qualifier("YY")
+@Qualifier("CountryAPIFallback")
 public class CountryAPIFallback implements CountryAPI {
     @Override
     public Mono<Country> getCountry(String code) {

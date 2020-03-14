@@ -1,8 +1,6 @@
 package com.vmware.cnt.apis;
 
 import com.vmware.cnt.models.Country;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import reactivefeign.spring.config.ReactiveFeignClient;

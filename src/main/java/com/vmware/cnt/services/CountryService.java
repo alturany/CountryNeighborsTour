@@ -48,21 +48,13 @@ public class CountryService {
                 .lookup(
                         k -> {
                             final Country country = countriesCache.get(k, Country.class);
-                            if(country != null){
-                                log.debug("This is cache hit, key: {} value: {}", countryCode, country);
-                            }
-                            return Mono.justOrEmpty(country)
-                                    .map(Signal::next);
+                            return Mono.justOrEmpty(country).map(Signal::next);
                         }, countryCode)
                 .onCacheMissResume(() -> {
-                    log.debug("<<<Cache miss>>> key: {}",countryCode);
                     final Supplier<Mono<Country>> countrySupplier =
-                            Retry.decorateSupplier(retry,
-                                    () -> countryAPI.getCountry(countryCode));
+                            Retry.decorateSupplier(retry, () -> countryAPI.getCountry(countryCode));
                     final Try<Mono<Country>> result = Try.ofSupplier(countrySupplier)
-                            .recover(
-                                    (throwable) -> countryAPIFallback.getCountry(countryCode
-                                    ));
+                            .recover((throwable) -> countryAPIFallback.getCountry(countryCode));
                     return result.get();
                 })
                 .andWriteWith(
@@ -87,9 +79,7 @@ public class CountryService {
 
         return CacheMono.lookup(
                 k -> Mono.justOrEmpty(conversionsCache.get(k, Double.class))
-                        .map(
-                                (s) -> Signal.next(s)
-                        )
+                        .map((s) -> Signal.next(s))
                 , key)
                 .onCacheMissResume(
                         () -> currencyAPI.getRate(base, toCurrency)
@@ -108,7 +98,7 @@ public class CountryService {
                 });
     }
 
-    @Cacheable(value="budgets", key = "#homeCode.concat('-').concat(#perCountryBudget).concat('-').concat(#totalBudget).concat(#currency)")
+    @Cacheable(value = "budgets", key = "#homeCode.concat('-').concat(#perCountryBudget).concat('-').concat(#totalBudget).concat(#currency)")
     public TripsBudgetDTO calculateBudget(String homeCode, int perCountryBudget, int totalBudget, String currency) {
         return TripsBudgetCalculator.builder()
                 .homeCode(homeCode)

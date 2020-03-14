@@ -4,7 +4,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.Singular;
 
-import java.util.List;
 import java.util.Set;
 
 @Data
@@ -12,7 +11,7 @@ import java.util.Set;
 public class TripsBudgetDTO {
     private Long leftover;
     private String currency;
-    private Long destinationVisits;
+    private Long perDestinationVisits;
 
     @Singular
     private Set<DestinationDTO> destinations;

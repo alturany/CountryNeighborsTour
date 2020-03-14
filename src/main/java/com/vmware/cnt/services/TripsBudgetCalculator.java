@@ -39,7 +39,7 @@ public class TripsBudgetCalculator {
         final Mono<Long> bordersCount = getBorders().count();
         final Mono<Long> leftover = bordersCount.map(count -> totalBudget % (perCountryBudget * count));
         final Long perDestinationVisits = leftover.map(l -> totalBudget - l).zipWith(bordersCount, (usedBudget, bc) -> (usedBudget / (bc * perCountryBudget))).block();
-        budgetDTOBuilder.destinationVisits(perDestinationVisits);
+        budgetDTOBuilder.perDestinationVisits(perDestinationVisits);
         budgetDTOBuilder.currency(homeCountryCurrency);
         budgetDTOBuilder.leftover(leftover.block());
         return perDestinationVisits;

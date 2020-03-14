@@ -41,7 +41,7 @@ public class TripsBudgetCalculatorTest {
 
         assertEquals(BULGARIAN_CURRENCY, result.getCurrency());
         assertEquals(100, result.getLeftover());
-        assertEquals(1, result.getDestinationVisits());
+        assertEquals(1, result.getPerDestinationVisits());
 
         assertEquals(
                 Set.of(
