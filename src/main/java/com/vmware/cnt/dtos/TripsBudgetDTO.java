@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.Singular;
 
 import java.util.List;
+import java.util.Set;
 
 @Data
 @Builder
@@ -14,6 +15,6 @@ public class TripsBudgetDTO {
     private Long destinationVisits;
 
     @Singular
-    private List<DestinationDTO> destinations;
+    private Set<DestinationDTO> destinations;
 }
 

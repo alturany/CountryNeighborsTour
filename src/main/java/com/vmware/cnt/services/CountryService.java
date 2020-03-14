@@ -46,12 +46,23 @@ public class CountryService {
 
         return CacheMono
                 .lookup(
-                        k -> Mono.justOrEmpty(countriesCache.get(k, Country.class))
-                                .map(Signal::next), countryCode)
+                        k -> {
+                            final Country country = countriesCache.get(k, Country.class);
+                            if(country != null){
+                                log.debug("This is cache hit, key: {} value: {}", countryCode, country);
+                            }
+                            return Mono.justOrEmpty(country)
+                                    .map(Signal::next);
+                        }, countryCode)
                 .onCacheMissResume(() -> {
-                    final Supplier<Mono<Country>> countrySupplier = Retry.decorateSupplier(retry, () -> countryAPI.getCountry(countryCode));
+                    log.debug("<<<Cache miss>>> key: {}",countryCode);
+                    final Supplier<Mono<Country>> countrySupplier =
+                            Retry.decorateSupplier(retry,
+                                    () -> countryAPI.getCountry(countryCode));
                     final Try<Mono<Country>> result = Try.ofSupplier(countrySupplier)
-                            .recover((throwable) -> countryAPIFallback.getCountry(countryCode));
+                            .recover(
+                                    (throwable) -> countryAPIFallback.getCountry(countryCode
+                                    ));
                     return result.get();
                 })
                 .andWriteWith(
@@ -63,7 +74,7 @@ public class CountryService {
                         })
                 )
                 .doOnError((error) -> {
-                    log.error("The following error happened on getCountry({}) method!", countryCode);
+                    log.error("error happened in getCountry({}) method!: {}", countryCode, error);
                     throw new RuntimeException(error);
                 });
     }
@@ -76,7 +87,10 @@ public class CountryService {
 
         return CacheMono.lookup(
                 k -> Mono.justOrEmpty(conversionsCache.get(k, Double.class))
-                        .map(Signal::next), key)
+                        .map(
+                                (s) -> Signal.next(s)
+                        )
+                , key)
                 .onCacheMissResume(
                         () -> currencyAPI.getRate(base, toCurrency)
                                 .flatMapIterable(conversion -> conversion.getRates().values())
@@ -89,7 +103,7 @@ public class CountryService {
                             }
                         }))
                 .doOnError(error -> {
-                    log.error("The following error happened on getConversionRate({},{}) method!", base, toCurrency);
+                    log.error("error happened in getConversionRate({},{}) method!", base, toCurrency);
                     throw new RuntimeException(error);
                 });
     }

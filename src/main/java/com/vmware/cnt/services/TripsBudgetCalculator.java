@@ -91,13 +91,14 @@ public class TripsBudgetCalculator {
 
     private void addTripsDetails(Flux<ImmutablePair<String, FastMoney>> visitsCosts) {
         final List<DestinationDTO> dList = visitsCosts.map((visitCost) -> {
-            DestinationDTO destination = new DestinationDTO();
+
             final String country = visitCost.left;
             final FastMoney cost = visitCost.right;
-            destination.setCost(cost.getNumber().doubleValue());
-            destination.setCountry(country);
-            destination.setCurrency(cost.getCurrency().getCurrencyCode());
-            return destination;
+            return DestinationDTO.builder()
+                    .cost(cost.getNumber().doubleValue())
+                    .country(country)
+                    .currency(cost.getCurrency().getCurrencyCode())
+                    .build();
         }).collectList().block();
         budgetDTOBuilder.destinations(dList);
     }

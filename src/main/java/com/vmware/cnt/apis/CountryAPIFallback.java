@@ -1,12 +1,14 @@
 package com.vmware.cnt.apis;
 
 import com.vmware.cnt.models.Country;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
 
 @Component
+@Qualifier("YY")
 public class CountryAPIFallback implements CountryAPI {
     @Override
     public Mono<Country> getCountry(String code) {
