@@ -4,7 +4,7 @@ Maven based Spring boot 2 API which has been built using:
 1) Reactive Feign Client
 2) Ehcache
 3) Lombok
-4) Resilience4j-Retry: Used it to retry country API calls, and depended on the default retry configs
+4) Resilience4j-Retry: Used it to retry country API calls.
 5) Reactor
 6) Reactor Extra utils: Spring built-in caching `@Cacheable & ... other annotations` does not support caching of `Mono` & `Flux` so used this functional lib to cache Feign call results
 7) Spring Security & OAuth: to implement the 2 bonuses 
