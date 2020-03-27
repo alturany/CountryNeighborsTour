@@ -61,12 +61,15 @@ public class TripsBudgetCalculator {
                 if (rate != DEFAULT_RATE) {
                     cost = BigDecimal.valueOf(perCountryBudget)
                             .multiply(BigDecimal.valueOf(rate))
+                            .multiply(BigDecimal.valueOf(perDestinationVisits))
                             .setScale(3, RoundingMode.HALF_DOWN)
                             .doubleValue();
                     usedCurrency = currency;
+                }else{
+                    cost = perCountryBudget * perDestinationVisits;
                 }
                 log.debug("Cost of visit {}{} used rate: {}", cost, currency, rate);
-                return ImmutablePair.of(country, FastMoney.of(cost * perDestinationVisits, usedCurrency));
+                return ImmutablePair.of(country, FastMoney.of(cost , usedCurrency));
             });
 
         }).doOnError(error -> {
@@ -102,4 +105,5 @@ public class TripsBudgetCalculator {
         }).collectList().block();
         budgetDTOBuilder.destinations(dList);
     }
+
 }
